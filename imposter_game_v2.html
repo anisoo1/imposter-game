@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMPOSTER — Deduction Party Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface2: #1c1c28;
+  --border: #2a2a3a;
+  --accent: #ff3c5a;
+  --accent2: #ffce00;
+  --accent3: #00e5ff;
+  --text: #f0f0f8;
+  --text-dim: #7878a0;
+  --civilian: #00e5ff;
+  --imposter: #ff3c5a;
+  --radius: 12px;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --font-display: 'Bebas Neue', sans-serif;
+}
+html[lang="ar"] {
+  --font-body: 'Cairo', sans-serif;
+  --font-mono: 'Cairo', sans-serif;
+  --font-display: 'Cairo', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:9999; opacity:0.4;
+}
+.screen { display:none; min-height:100vh; flex-direction:column; }
+.screen.active { display:flex; }
+
+/* ── MAIN MENU ── */
+#screen-menu { align-items:center; justify-content:center; padding:40px 24px; position:relative; overflow:hidden; }
+.menu-bg { position:absolute; inset:0; background:radial-gradient(ellipse at 20% 80%,rgba(255,60,90,.15) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(0,229,255,.1) 0%,transparent 60%); }
+.menu-grid { position:absolute; inset:0; background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px); background-size:60px 60px; opacity:.3; mask-image:radial-gradient(ellipse at center,black 30%,transparent 80%); }
+.menu-content { position:relative; text-align:center; max-width:400px; width:100%; }
+.game-logo { font-family:var(--font-display); font-size:clamp(64px,18vw,110px); letter-spacing:8px; line-height:.85; color:var(--text); text-shadow:0 0 60px rgba(255,60,90,.4),0 0 120px rgba(255,60,90,.2); animation:logoGlow 3s ease-in-out infinite alternate; }
+html[lang="ar"] .game-logo { letter-spacing:2px; font-size:clamp(52px,14vw,90px); }
+@keyframes logoGlow { from { text-shadow:0 0 40px rgba(255,60,90,.3),0 0 80px rgba(255,60,90,.1); } to { text-shadow:0 0 80px rgba(255,60,90,.6),0 0 160px rgba(255,60,90,.3); } }
+.logo-eye { display:inline-block; width:1em; height:.7em; background:var(--accent); border-radius:50%; position:relative; top:-.1em; margin:0 2px; vertical-align:middle; animation:eyeBlink 4s ease-in-out infinite; }
+.logo-eye::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:35%; height:55%; background:#000; border-radius:50%; }
+@keyframes eyeBlink { 0%,90%,100% { transform:scaleY(1); } 95% { transform:scaleY(.05); } }
+.tagline { font-family:var(--font-mono); font-size:12px; letter-spacing:4px; color:var(--text-dim); text-transform:uppercase; margin:16px 0 48px; }
+html[lang="ar"] .tagline { letter-spacing:1px; }
+.lang-btn { position:absolute; top:20px; right:20px; background:var(--surface); border:1px solid var(--border); color:var(--text-dim); border-radius:100px; padding:8px 16px; font-family:var(--font-mono); font-size:12px; cursor:pointer; transition:all .2s; z-index:10; }
+html[dir="rtl"] .lang-btn { right:auto; left:20px; }
+.lang-btn:hover { border-color:var(--accent3); color:var(--text); }
+
+/* ── BUTTONS ── */
+.btn { display:block; width:100%; padding:18px 32px; border:none; border-radius:var(--radius); font-family:var(--font-mono); font-size:14px; letter-spacing:3px; text-transform:uppercase; cursor:pointer; transition:all .2s ease; position:relative; overflow:hidden; }
+html[lang="ar"] .btn { letter-spacing:.5px; font-size:15px; }
+.btn::before { content:''; position:absolute; inset:0; background:rgba(255,255,255,.1); opacity:0; transition:opacity .2s; }
+.btn:hover::before { opacity:1; }
+.btn:active { transform:scale(.97); }
+.btn-primary { background:var(--accent); color:#fff; font-weight:500; box-shadow:0 8px 32px rgba(255,60,90,.4),0 2px 8px rgba(255,60,90,.3); margin-bottom:12px; }
+.btn-secondary { background:var(--surface); color:var(--text-dim); border:1px solid var(--border); }
+.btn-danger { background:rgba(255,60,90,.15); color:var(--accent); border:1px solid rgba(255,60,90,.3); }
+
+/* ── BACK BTN ── */
+.back-btn { display:flex; align-items:center; gap:8px; background:none; border:none; color:var(--text-dim); font-family:var(--font-mono); font-size:12px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; margin-bottom:32px; transition:color .2s; }
+html[lang="ar"] .back-btn { letter-spacing:.5px; }
+.back-btn:hover { color:var(--text); }
+
+/* ── RULES ── */
+#screen-rules { padding:40px 24px; max-width:600px; margin:0 auto; width:100%; overflow-y:auto; }
+.screen-title { font-family:var(--font-display); font-size:48px; letter-spacing:4px; margin-bottom:32px; color:var(--accent); }
+html[lang="ar"] .screen-title { font-size:40px; letter-spacing:0; }
+.rules-grid { display:grid; gap:16px; }
+.rule-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; display:flex; gap:16px; align-items:flex-start; }
+.rule-num { font-family:var(--font-display); font-size:32px; color:var(--accent); line-height:1; flex-shrink:0; }
+.rule-text h3 { font-family:var(--font-mono); font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--accent2); margin-bottom:6px; }
+html[lang="ar"] .rule-text h3 { letter-spacing:.5px; }
+.rule-text p { font-size:14px; color:var(--text-dim); line-height:1.6; }
+
+/* ── SETUP ── */
+#screen-setup { padding:40px 24px; max-width:600px; margin:0 auto; width:100%; overflow-y:auto; }
+.form-section { margin-bottom:28px; }
+.form-label { font-family:var(--font-mono); font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); margin-bottom:10px; display:block; }
+html[lang="ar"] .form-label { letter-spacing:.5px; font-size:13px; }
+.player-count-row { display:flex; align-items:center; gap:20px; }
+.count-btn { width:44px; height:44px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; flex-shrink:0; }
+.count-btn:hover { border-color:var(--accent); color:var(--accent); }
+.count-display { font-family:var(--font-display); font-size:48px; color:var(--accent); min-width:60px; text-align:center; }
+.names-grid { display:grid; gap:8px; }
+.name-input-row { display:flex; align-items:center; gap:10px; }
+.player-badge { width:28px; height:28px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:11px; color:var(--text-dim); flex-shrink:0; }
+.name-input { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--text); font-family:var(--font-body); font-size:15px; outline:none; transition:border-color .2s; }
+.name-input:focus { border-color:var(--accent3); }
+.name-input::placeholder { color:var(--text-dim); }
+
+/* ── CATEGORY GRID ── */
+.category-section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.edit-cats-btn { background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); border-radius:8px; padding:8px 14px; font-family:var(--font-mono); font-size:11px; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:6px; }
+.edit-cats-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+.category-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; }
+.cat-btn { padding:12px 16px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); font-family:var(--font-mono); font-size:11px; letter-spacing:1px; cursor:pointer; transition:all .2s; text-align:left; display:flex; flex-direction:column; gap:4px; }
+html[lang="ar"] .cat-btn { text-align:right; font-size:13px; letter-spacing:0; }
+.cat-btn .cat-icon { font-size:20px; }
+.cat-btn:hover { border-color:var(--accent2); color:var(--text); }
+.cat-btn.selected { border-color:var(--accent2); background:rgba(255,206,0,.1); color:var(--accent2); }
+
+/* ── HINT TOGGLE ── */
+.toggle-row { display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; }
+.toggle-label { font-family:var(--font-body); font-size:15px; color:var(--text); }
+.toggle-sub { font-size:12px; color:var(--text-dim); margin-top:2px; }
+.toggle-switch { position:relative; width:48px; height:26px; flex-shrink:0; }
+.toggle-switch input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:var(--border); border-radius:13px; cursor:pointer; transition:.3s; }
+.toggle-slider::before { content:''; position:absolute; width:20px; height:20px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
+input:checked + .toggle-slider { background:var(--accent3); }
+input:checked + .toggle-slider::before { transform:translateX(22px); }
+html[dir="rtl"] .toggle-slider::before { left:auto; right:3px; }
+html[dir="rtl"] input:checked + .toggle-slider::before { transform:translateX(-22px); }
+
+/* ── PASS THE PHONE ── */
+#screen-pass { align-items:center; justify-content:center; padding:40px 24px; text-align:center; position:relative; }
+.pass-bg { position:absolute; inset:0; background:radial-gradient(ellipse at center,rgba(0,229,255,.05) 0%,transparent 70%); }
+.progress-dots { display:flex; gap:6px; justify-content:center; margin-bottom:48px; position:relative; z-index:1; }
+.progress-dot { width:8px; height:8px; border-radius:50%; background:var(--border); transition:background .3s; }
+.progress-dot.done { background:var(--accent3); }
+.progress-dot.current { background:var(--accent); width:24px; border-radius:4px; }
+.pass-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:40px 32px; max-width:380px; width:100%; position:relative; z-index:1; }
+.pass-label { font-family:var(--font-mono); font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; }
+html[lang="ar"] .pass-label { letter-spacing:.5px; font-size:13px; }
+.pass-name { font-family:var(--font-display); font-size:52px; letter-spacing:3px; color:var(--text); margin-bottom:32px; line-height:1; }
+html[lang="ar"] .pass-name { font-size:44px; letter-spacing:0; }
+.role-reveal { display:none; animation:fadeIn .4s ease; }
+.role-reveal.visible { display:block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.role-badge { display:inline-flex; align-items:center; gap:8px; padding:8px 20px; border-radius:100px; font-family:var(--font-mono); font-size:12px; letter-spacing:2px; text-transform:uppercase; margin-bottom:20px; }
+html[lang="ar"] .role-badge { letter-spacing:.5px; font-size:13px; }
+.role-badge.civilian { background:rgba(0,229,255,.1); color:var(--civilian); border:1px solid rgba(0,229,255,.3); }
+.role-badge.imposter { background:rgba(255,60,90,.1); color:var(--imposter); border:1px solid rgba(255,60,90,.3); }
+.secret-box { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:8px; }
+.secret-box-label { font-family:var(--font-mono); font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; }
+html[lang="ar"] .secret-box-label { letter-spacing:.5px; font-size:12px; }
+.secret-word { font-family:var(--font-display); font-size:40px; letter-spacing:3px; }
+html[lang="ar"] .secret-word { font-size:34px; letter-spacing:0; }
+.civilian .secret-word { color:var(--civilian); }
+.imposter-word { color:var(--imposter); }
+.role-hint { font-size:13px; color:var(--text-dim); margin-bottom:24px; line-height:1.5; }
+
+/* ── TIMER ── */
+#screen-timer { padding:32px 24px; display:flex; flex-direction:column; align-items:center; position:relative; overflow:hidden; }
+.timer-bg { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 30%,rgba(255,206,0,.05) 0%,transparent 60%); }
+.timer-header { width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:32px; position:relative; z-index:1; }
+.timer-title { font-family:var(--font-mono); font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); }
+html[lang="ar"] .timer-title { letter-spacing:.5px; font-size:13px; }
+.round-badge { background:var(--surface); border:1px solid var(--border); border-radius:100px; padding:6px 14px; font-family:var(--font-mono); font-size:11px; letter-spacing:2px; color:var(--text-dim); }
+.timer-display { font-family:var(--font-display); font-size:clamp(80px,25vw,140px); letter-spacing:6px; color:var(--accent2); text-shadow:0 0 40px rgba(255,206,0,.3); position:relative; z-index:1; line-height:1; transition:color .3s; }
+.timer-display.urgent { color:var(--accent); text-shadow:0 0 40px rgba(255,60,90,.4); animation:timerPulse .5s ease-in-out infinite alternate; }
+@keyframes timerPulse { from { transform:scale(1); } to { transform:scale(1.02); } }
+.players-row { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:24px 0; position:relative; z-index:1; max-width:500px; }
+.player-chip { background:var(--surface); border:1px solid var(--border); border-radius:100px; padding:8px 16px; font-family:var(--font-mono); font-size:12px; color:var(--text-dim); letter-spacing:1px; }
+.timer-actions { display:flex; flex-direction:column; gap:12px; width:100%; max-width:400px; margin-top:auto; position:relative; z-index:1; }
+.btn-imposter { background:linear-gradient(135deg,var(--accent),#c0203a); color:#fff; font-weight:500; box-shadow:0 8px 32px rgba(255,60,90,.4); font-size:15px; letter-spacing:2px; padding:20px; }
+
+/* ── IMPOSTER GUESS ── */
+#screen-guess { align-items:center; justify-content:center; padding:40px 24px; text-align:center; }
+.guess-card { background:var(--surface); border:1px solid rgba(255,60,90,.3); border-radius:20px; padding:40px 32px; max-width:400px; width:100%; box-shadow:0 0 60px rgba(255,60,90,.1); }
+.guess-icon { font-size:48px; margin-bottom:16px; }
+.guess-title { font-family:var(--font-display); font-size:40px; color:var(--accent); letter-spacing:3px; margin-bottom:8px; }
+html[lang="ar"] .guess-title { font-size:34px; letter-spacing:0; }
+.guess-subtitle { font-size:14px; color:var(--text-dim); margin-bottom:28px; line-height:1.5; }
+.guess-input { width:100%; background:var(--surface2); border:2px solid var(--border); border-radius:12px; padding:16px 20px; color:var(--text); font-family:var(--font-body); font-size:22px; text-align:center; outline:none; transition:border-color .2s; margin-bottom:16px; }
+.guess-input:focus { border-color:var(--accent); }
+.guess-input::placeholder { color:var(--border); font-size:16px; }
+
+/* ── VOTING ── */
+#screen-vote { padding:32px 24px; max-width:600px; margin:0 auto; width:100%; overflow-y:auto; }
+.vote-list { display:grid; gap:10px; margin-bottom:24px; }
+.vote-card { background:var(--surface); border:2px solid var(--border); border-radius:var(--radius); padding:18px 20px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:space-between; }
+.vote-card:hover { border-color:var(--accent2); }
+.vote-card.selected { border-color:var(--accent); background:rgba(255,60,90,.08); }
+.vote-name { font-family:var(--font-mono); font-size:16px; letter-spacing:1px; }
+html[lang="ar"] .vote-name { letter-spacing:0; font-size:17px; }
+.vote-indicator { width:24px; height:24px; border-radius:50%; border:2px solid var(--border); transition:all .2s; display:flex; align-items:center; justify-content:center; }
+.vote-card.selected .vote-indicator { background:var(--accent); border-color:var(--accent); color:#fff; font-size:14px; }
+
+/* ── RESULTS ── */
+#screen-results { align-items:center; justify-content:center; padding:40px 24px; text-align:center; position:relative; overflow:hidden; }
+.confetti-bg { position:absolute; inset:0; overflow:hidden; }
+.confetti-piece { position:absolute; width:8px; height:8px; animation:confettiFall linear infinite; }
+@keyframes confettiFall { from { transform:translateY(-20px) rotate(0deg); opacity:1; } to { transform:translateY(110vh) rotate(720deg); opacity:0; } }
+.results-card { background:var(--surface); border-radius:24px; padding:40px 32px; max-width:420px; width:100%; position:relative; z-index:1; border:1px solid var(--border); }
+.winner-banner { font-family:var(--font-display); font-size:16px; letter-spacing:6px; text-transform:uppercase; margin-bottom:8px; }
+html[lang="ar"] .winner-banner { letter-spacing:0; font-size:18px; }
+.winner-title { font-family:var(--font-display); font-size:56px; letter-spacing:4px; line-height:1; margin-bottom:32px; }
+html[lang="ar"] .winner-title { font-size:44px; letter-spacing:0; }
+.civilians-win .winner-banner { color:var(--civilian); }
+.civilians-win .winner-title  { color:var(--civilian); text-shadow:0 0 40px rgba(0,229,255,.4); }
+.imposter-wins .winner-banner { color:var(--imposter); }
+.imposter-wins .winner-title  { color:var(--imposter); text-shadow:0 0 40px rgba(255,60,90,.4); }
+.reveal-grid { display:grid; gap:12px; margin-bottom:28px; }
+.reveal-item { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:16px 20px; text-align:left; }
+html[dir="rtl"] .reveal-item { text-align:right; }
+.reveal-item-label { font-family:var(--font-mono); font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; }
+html[lang="ar"] .reveal-item-label { letter-spacing:.5px; font-size:12px; }
+.reveal-item-value { font-family:var(--font-display); font-size:28px; letter-spacing:2px; }
+html[lang="ar"] .reveal-item-value { font-size:24px; letter-spacing:0; }
+.reveal-item-value.red { color:var(--imposter); }
+.reveal-item-value.yellow { color:var(--accent2); }
+.reveal-item-value.cyan { color:var(--civilian); }
+.outcome-desc { font-size:14px; color:var(--text-dim); line-height:1.6; margin-bottom:28px; }
+
+/* ── CATEGORY MANAGER ── */
+#screen-catman { padding:0; overflow:hidden; }
+.catman-layout { display:flex; flex-direction:column; height:100vh; }
+.catman-header { background:var(--surface); border-bottom:1px solid var(--border); padding:16px 20px; display:flex; align-items:center; gap:16px; flex-shrink:0; }
+.catman-title { font-family:var(--font-display); font-size:28px; letter-spacing:3px; color:var(--text); flex:1; }
+html[lang="ar"] .catman-title { letter-spacing:0; font-size:24px; }
+.catman-body { display:flex; flex:1; overflow:hidden; }
+.catman-sidebar { width:200px; border-right:1px solid var(--border); overflow-y:auto; flex-shrink:0; background:var(--bg); }
+html[dir="rtl"] .catman-sidebar { border-right:none; border-left:1px solid var(--border); }
+.catman-main { flex:1; overflow-y:auto; padding:20px; }
+.sidebar-item { padding:14px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:10px; }
+.sidebar-item:hover { background:var(--surface); }
+.sidebar-item.active { background:var(--surface2); border-right:3px solid var(--accent); }
+html[dir="rtl"] .sidebar-item.active { border-right:none; border-left:3px solid var(--accent); }
+.sidebar-icon { font-size:18px; flex-shrink:0; }
+.sidebar-name { font-family:var(--font-body); font-size:13px; color:var(--text-dim); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sidebar-item.active .sidebar-name { color:var(--text); }
+.sidebar-add-btn { padding:14px 16px; cursor:pointer; display:flex; align-items:center; gap:10px; color:var(--accent3); font-family:var(--font-mono); font-size:11px; transition:all .2s; border-top:1px solid var(--border); }
+.sidebar-add-btn:hover { background:var(--surface); }
+.word-list { display:grid; gap:8px; margin-bottom:20px; }
+.word-row { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; display:flex; align-items:center; gap:12px; }
+.word-col { flex:1; }
+.word-col .w { font-family:var(--font-body); font-size:15px; color:var(--text); }
+.word-col .h { font-family:var(--font-mono); font-size:11px; color:var(--text-dim); margin-top:2px; }
+html[lang="ar"] .word-col .h { font-size:12px; }
+.delete-word-btn { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:18px; padding:4px 8px; border-radius:6px; transition:all .2s; flex-shrink:0; }
+.delete-word-btn:hover { background:rgba(255,60,90,.15); color:var(--accent); }
+.add-word-form { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; display:grid; gap:10px; }
+.add-word-form .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.add-word-form input { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; color:var(--text); font-family:var(--font-body); font-size:14px; outline:none; transition:border-color .2s; width:100%; }
+.add-word-form input:focus { border-color:var(--accent3); }
+.add-word-form input::placeholder { color:var(--text-dim); }
+.catman-section-title { font-family:var(--font-mono); font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); margin-bottom:12px; }
+html[lang="ar"] .catman-section-title { letter-spacing:.5px; font-size:12px; }
+.cat-header-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.cat-display-name { font-family:var(--font-display); font-size:28px; letter-spacing:2px; color:var(--text); }
+html[lang="ar"] .cat-display-name { font-size:24px; letter-spacing:0; }
+.cat-word-count { font-family:var(--font-mono); font-size:11px; color:var(--text-dim); }
+.btn-sm { padding:8px 16px; font-size:11px; letter-spacing:1px; width:auto; display:inline-flex; align-items:center; gap:6px; border-radius:8px; }
+.empty-state { text-align:center; padding:40px 20px; color:var(--text-dim); font-size:14px; line-height:1.6; }
+.new-cat-form { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; display:grid; gap:12px; max-width:400px; }
+.new-cat-form input { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--text); font-family:var(--font-body); font-size:15px; outline:none; transition:border-color .2s; }
+.new-cat-form input:focus { border-color:var(--accent3); }
+.new-cat-form input::placeholder { color:var(--text-dim); }
+
+/* ── TOAST ── */
+.toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--surface2); border:1px solid var(--border); border-radius:100px; padding:12px 24px; font-family:var(--font-mono); font-size:12px; color:var(--text); transition:transform .3s ease; z-index:10000; white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+/* ── MODAL OVERLAY ── */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:5000; align-items:center; justify-content:center; padding:24px; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:32px; max-width:360px; width:100%; text-align:center; }
+.modal-title { font-family:var(--font-display); font-size:28px; color:var(--accent); margin-bottom:12px; letter-spacing:2px; }
+html[lang="ar"] .modal-title { letter-spacing:0; }
+.modal-body { font-size:14px; color:var(--text-dim); margin-bottom:24px; line-height:1.6; }
+.modal-actions { display:flex; gap:10px; }
+.modal-actions .btn { margin:0; }
+
+@media(max-width:480px) {
+  .catman-sidebar { width:56px; }
+  .sidebar-name { display:none; }
+  .sidebar-add-btn span { display:none; }
+  .add-word-form .form-row { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ MAIN MENU ═══════════ -->
+<div id="screen-menu" class="screen active">
+  <div class="menu-bg"></div>
+  <div class="menu-grid"></div>
+  <button class="lang-btn" onclick="toggleLang()" id="lang-toggle-btn">🌐 ع</button>
+  <div class="menu-content">
+    <div class="game-logo" id="logo-text">IMP<span class="logo-eye"></span>STER</div>
+    <div class="tagline" data-i18n="tagline">The Deduction Party Game</div>
+    <button class="btn btn-primary" onclick="goTo('screen-setup')" data-i18n="start_game">▶  Start Game</button>
+    <button class="btn btn-secondary" onclick="goTo('screen-rules')" data-i18n="how_to_play">?  How To Play</button>
+  </div>
+</div>
+
+<!-- ═══════════ RULES ═══════════ -->
+<div id="screen-rules" class="screen">
+  <div style="padding:32px 24px;max-width:600px;margin:0 auto;width:100%;overflow-y:auto">
+    <button class="back-btn" onclick="goTo('screen-menu')" data-i18n="back">← Back</button>
+    <div class="screen-title" data-i18n="rules_title">Rules</div>
+    <div class="rules-grid" id="rules-grid"></div>
+    <div style="height:32px"></div>
+    <button class="btn btn-primary" onclick="goTo('screen-setup')" data-i18n="start_game">Start Game</button>
+    <div style="height:32px"></div>
+  </div>
+</div>
+
+<!-- ═══════════ SETUP ═══════════ -->
+<div id="screen-setup" class="screen">
+  <div style="padding:32px 24px;max-width:600px;margin:0 auto;width:100%;overflow-y:auto">
+    <button class="back-btn" onclick="goTo('screen-menu')" data-i18n="back">← Back</button>
+    <div class="screen-title" data-i18n="setup_title">Setup</div>
+
+    <div class="form-section">
+      <label class="form-label" data-i18n="num_players">Number of Players</label>
+      <div class="player-count-row">
+        <button class="count-btn" onclick="changeCount(-1)">−</button>
+        <div class="count-display" id="count-display">4</div>
+        <button class="count-btn" onclick="changeCount(1)">+</button>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label" data-i18n="player_names">Player Names</label>
+      <div class="names-grid" id="names-grid"></div>
+    </div>
+
+    <div class="form-section">
+      <div class="category-section-header">
+        <label class="form-label" style="margin:0" data-i18n="category">Category</label>
+        <button class="edit-cats-btn" onclick="openCatMan()" id="edit-cats-btn">
+          <span>⚙️</span><span data-i18n="edit_cats">Edit Categories</span>
+        </button>
+      </div>
+      <div class="category-grid" id="cat-grid"></div>
+    </div>
+
+    <div class="form-section">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label" data-i18n="hint_toggle_label">Enable Hints for Imposter</div>
+          <div class="toggle-sub" data-i18n="hint_toggle_sub">Imposter sees a vague hint instead of just the category</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="hint-toggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div style="height:8px"></div>
+    <button class="btn btn-primary" onclick="startGame()" data-i18n="deal_roles">Deal Roles →</button>
+    <div style="height:32px"></div>
+  </div>
+</div>
+
+<!-- ═══════════ PASS THE PHONE ═══════════ -->
+<div id="screen-pass" class="screen">
+  <div class="pass-bg"></div>
+  <div class="progress-dots" id="progress-dots"></div>
+  <div class="pass-card">
+    <div id="pass-state-cover">
+      <div class="pass-label" data-i18n="pass_to">Pass the phone to</div>
+      <div class="pass-name" id="pass-player-name">—</div>
+      <button class="btn btn-primary" onclick="revealRole()" style="margin:0" data-i18n="tap_reveal">👁  Tap to Reveal</button>
+    </div>
+    <div class="role-reveal" id="pass-state-reveal">
+      <div id="role-badge-el" class="role-badge civilian">● Civilian</div>
+      <div class="secret-box">
+        <div class="secret-box-label" id="secret-label">Secret Word</div>
+        <div class="secret-word" id="secret-word-display">PIZZA</div>
+      </div>
+      <p class="role-hint" id="role-hint-text"></p>
+      <button class="btn btn-primary" onclick="nextPlayer()" style="margin:0" data-i18n="got_it">Got It — Hide ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ TIMER ═══════════ -->
+<div id="screen-timer" class="screen">
+  <div class="timer-bg"></div>
+  <div class="timer-header" style="width:100%;max-width:500px">
+    <div class="timer-title" data-i18n="discussion_phase">Discussion Phase</div>
+    <div class="round-badge" id="category-badge">—</div>
+  </div>
+  <div class="timer-display" id="timer-display">3:00</div>
+  <div class="players-row" id="players-row"></div>
+  <div class="timer-actions">
+    <button class="btn btn-imposter" onclick="goTo('screen-guess')" data-i18n="imposter_guess">🔍  Imposter Guess</button>
+    <button class="btn btn-secondary" onclick="endDiscussion()" data-i18n="stop_vote">Stop &amp; Vote</button>
+  </div>
+</div>
+
+<!-- ═══════════ IMPOSTER GUESS ═══════════ -->
+<div id="screen-guess" class="screen">
+  <div class="guess-card">
+    <div class="guess-icon">🕵️</div>
+    <div class="guess-title" data-i18n="your_guess">Your Guess</div>
+    <p class="guess-subtitle" data-i18n="your_guess_sub">What is the Secret Word?<br>This is your one shot.</p>
+    <input class="guess-input" id="guess-input" data-i18n-placeholder="type_guess" autocomplete="off">
+    <button class="btn btn-imposter" style="margin-bottom:10px" onclick="submitGuess()" data-i18n="submit_guess">Submit Guess</button>
+    <button class="btn btn-secondary" onclick="goTo('screen-timer')" style="margin:0" data-i18n="back_discussion">← Back to Discussion</button>
+  </div>
+</div>
+
+<!-- ═══════════ VOTING ═══════════ -->
+<div id="screen-vote" class="screen">
+  <button class="back-btn" style="margin-bottom:24px" onclick="goTo('screen-timer')" data-i18n="back">← Back</button>
+  <div class="screen-title" style="color:var(--accent2)" data-i18n="vote_title">Vote</div>
+  <p style="font-size:14px;color:var(--text-dim);margin-bottom:24px;line-height:1.5" data-i18n="vote_desc">Who do you think is the Imposter? The majority rules.</p>
+  <div class="vote-list" id="vote-list"></div>
+  <button class="btn btn-primary" id="vote-confirm-btn" onclick="confirmVote()" style="opacity:.4;pointer-events:none" data-i18n="confirm_vote">Confirm Vote →</button>
+</div>
+
+<!-- ═══════════ RESULTS ═══════════ -->
+<div id="screen-results" class="screen">
+  <div class="confetti-bg" id="confetti-bg"></div>
+  <div class="results-card" id="results-card">
+    <div class="winner-banner" id="winner-banner"></div>
+    <div class="winner-title" id="winner-title"></div>
+    <div class="reveal-grid">
+      <div class="reveal-item">
+        <div class="reveal-item-label" data-i18n="imposter_was">The Imposter Was</div>
+        <div class="reveal-item-value red" id="result-imposter">—</div>
+      </div>
+      <div class="reveal-item">
+        <div class="reveal-item-label" data-i18n="secret_word_label">Secret Word</div>
+        <div class="reveal-item-value yellow" id="result-word">—</div>
+      </div>
+      <div class="reveal-item">
+        <div class="reveal-item-label" data-i18n="how_ended">How It Ended</div>
+        <div class="reveal-item-value cyan" id="result-how">—</div>
+      </div>
+    </div>
+    <p class="outcome-desc" id="outcome-desc"></p>
+    <button class="btn btn-primary" onclick="playAgain()" data-i18n="play_again">Play Again</button>
+    <button class="btn btn-secondary" onclick="goTo('screen-menu')" style="margin-top:10px" data-i18n="main_menu">Main Menu</button>
+  </div>
+</div>
+
+<!-- ═══════════ CATEGORY MANAGER ═══════════ -->
+<div id="screen-catman" class="screen">
+  <div class="catman-layout">
+    <div class="catman-header">
+      <button class="back-btn" style="margin:0" onclick="closeCatMan()" data-i18n="back">← Back</button>
+      <div class="catman-title" data-i18n="cat_manager">Category Manager</div>
+    </div>
+    <div class="catman-body">
+      <div class="catman-sidebar" id="catman-sidebar"></div>
+      <div class="catman-main" id="catman-main">
+        <div class="empty-state" data-i18n="select_cat_hint">← Select a category to manage its words</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">Confirm</div>
+    <div class="modal-body" id="modal-body">Are you sure?</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()" data-i18n="cancel">Cancel</button>
+      <button class="btn btn-danger" id="modal-ok-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  I18N — TRANSLATIONS
+// ════════════════════════════════════════════════════════
+const TRANSLATIONS = {
+  en: {
+    tagline: "The Deduction Party Game",
+    start_game: "▶  Start Game",
+    how_to_play: "?  How To Play",
+    back: "← Back",
+    rules_title: "Rules",
+    setup_title: "Setup",
+    num_players: "Number of Players",
+    player_names: "Player Names",
+    category: "Category",
+    edit_cats: "Edit Categories",
+    hint_toggle_label: "Enable Hints for Imposter",
+    hint_toggle_sub: "Imposter sees a vague hint instead of just the category",
+    deal_roles: "Deal Roles →",
+    pass_to: "Pass the phone to",
+    tap_reveal: "👁  Tap to Reveal",
+    got_it: "Got It — Hide ✓",
+    discussion_phase: "Discussion Phase",
+    imposter_guess: "🔍  Imposter Guess",
+    stop_vote: "Stop & Vote",
+    your_guess: "Your Guess",
+    your_guess_sub: "What is the Secret Word?<br>This is your one shot.",
+    type_guess: "TYPE YOUR GUESS",
+    submit_guess: "Submit Guess",
+    back_discussion: "← Back to Discussion",
+    vote_title: "Vote",
+    vote_desc: "Who do you think is the Imposter? The majority rules.",
+    confirm_vote: "Confirm Vote →",
+    imposter_was: "The Imposter Was",
+    secret_word_label: "Secret Word",
+    how_ended: "How It Ended",
+    play_again: "Play Again",
+    main_menu: "Main Menu",
+    cat_manager: "Category Manager",
+    select_cat_hint: "← Select a category to manage its words",
+    cancel: "Cancel",
+    delete: "Delete",
+    add_word: "Add Word",
+    new_word: "New Word",
+    new_hint: "Hint",
+    add_to_cat: "Add to Category",
+    delete_category: "Delete Category",
+    new_category: "New Category",
+    cat_name: "Category Name",
+    cat_emoji: "Emoji Icon",
+    create_cat: "Create Category",
+    words_in_cat: "Words in Category",
+    no_words: "No words yet. Add one below!",
+    fill_fields: "Please fill in both fields",
+    pick_category: "Pick a category first!",
+    word_added: "Word added!",
+    word_deleted: "Word deleted",
+    cat_created: "Category created!",
+    cat_deleted: "Category deleted",
+    min_players: "Minimum 3 players!",
+    role_civilian: "● Civilian",
+    role_imposter: "⚠ Imposter",
+    your_hint: "Your Hint",
+    civilian_hint_text: "Protect this word. Don't say it directly — the Imposter is listening!",
+    imposter_hint_text: "You don't know the exact word. Use this hint to blend in, and try to guess it before time runs out!",
+    imposter_no_hint_text: "You are the Imposter! Listen carefully to everyone's answers to figure out the secret word.",
+    rules: [
+      { title:"Setup", body:"Choose a category and enter player names. Each player will secretly receive a role on their own." },
+      { title:"Roles", body:"<strong style='color:var(--civilian)'>Civilians</strong> see the Secret Word. The <strong style='color:var(--imposter)'>Imposter</strong> only sees a vague hint — they must blend in without being caught." },
+      { title:"Discussion", body:"Players take turns asking each other vague questions. Be careful — say too much and the Imposter will guess the word. Say too little and you'll seem suspicious!" },
+      { title:"Win Conditions", body:"<strong style='color:var(--civilian)'>Civilians win</strong> if they vote out the Imposter. <strong style='color:var(--imposter)'>The Imposter wins</strong> if they survive the vote OR correctly guess the secret word during discussion." },
+    ],
+    outcomes: {
+      civilians_won:     { banner:"🎉 Victory",    title:"Civilians Win!",  how:"Voted Out",         desc:(n,w)=>`The crowd spoke and justice was served. ${n} was correctly identified as the Imposter!` },
+      imposter_survived: { banner:"🕵️ Defeat",    title:"Imposter Wins!", how:"Survived Vote",     desc:(n,w)=>`${n} blended in perfectly and slipped through the vote! The civilians chose poorly.` },
+      imposter_guessed:  { banner:"🎯 Brilliant!", title:"Imposter Wins!", how:"Guessed the Word",  desc:(n,w)=>`${n} pieced together the clues and correctly guessed "${w}"! A master of deduction.` },
+      imposter_wrong:    { banner:"✓ Wrong Guess", title:"Civilians Win!",  how:"Bad Imposter Guess",desc:(n,w)=>`${n}'s guess was wrong! The civilians can now identify the Imposter and win the round.` },
+    }
+  },
+  ar: {
+    tagline: "لعبة حفلات الاستنتاج",
+    start_game: "▶  ابدأ اللعبة",
+    how_to_play: "?  كيف تلعب",
+    back: "→ رجوع",
+    rules_title: "القواعد",
+    setup_title: "الإعداد",
+    num_players: "عدد اللاعبين",
+    player_names: "أسماء اللاعبين",
+    category: "الفئة",
+    edit_cats: "تعديل الفئات",
+    hint_toggle_label: "تفعيل التلميحات للمتسلل",
+    hint_toggle_sub: "يرى المتسلل تلميحًا غامضًا بدلاً من اسم الفئة فقط",
+    deal_roles: "توزيع الأدوار ←",
+    pass_to: "مرر الهاتف إلى",
+    tap_reveal: "👁  اضغط للكشف",
+    got_it: "فهمت — أخفِ ✓",
+    discussion_phase: "مرحلة النقاش",
+    imposter_guess: "🔍  تخمين المتسلل",
+    stop_vote: "توقف وصوّت",
+    your_guess: "تخمينك",
+    your_guess_sub: "ما هي الكلمة السرية؟<br>هذه فرصتك الوحيدة.",
+    type_guess: "اكتب تخمينك",
+    submit_guess: "إرسال التخمين",
+    back_discussion: "→ العودة للنقاش",
+    vote_title: "التصويت",
+    vote_desc: "من تعتقد أنه المتسلل؟ الأغلبية تحكم.",
+    confirm_vote: "تأكيد التصويت ←",
+    imposter_was: "كان المتسلل هو",
+    secret_word_label: "الكلمة السرية",
+    how_ended: "كيف انتهت",
+    play_again: "العب مجدداً",
+    main_menu: "القائمة الرئيسية",
+    cat_manager: "مدير الفئات",
+    select_cat_hint: "اختر فئة لإدارة كلماتها →",
+    cancel: "إلغاء",
+    delete: "حذف",
+    add_word: "أضف كلمة",
+    new_word: "كلمة جديدة",
+    new_hint: "التلميح",
+    add_to_cat: "أضف للفئة",
+    delete_category: "حذف الفئة",
+    new_category: "فئة جديدة",
+    cat_name: "اسم الفئة",
+    cat_emoji: "رمز تعبيري",
+    create_cat: "إنشاء الفئة",
+    words_in_cat: "كلمات الفئة",
+    no_words: "لا توجد كلمات بعد. أضف واحدة أدناه!",
+    fill_fields: "يرجى ملء كلا الحقلين",
+    pick_category: "اختر فئة أولاً!",
+    word_added: "تمت إضافة الكلمة!",
+    word_deleted: "تم حذف الكلمة",
+    cat_created: "تم إنشاء الفئة!",
+    cat_deleted: "تم حذف الفئة",
+    min_players: "الحد الأدنى 3 لاعبين!",
+    role_civilian: "● مدني",
+    role_imposter: "⚠ متسلل",
+    your_hint: "تلميحك",
+    civilian_hint_text: "احمِ هذه الكلمة. لا تقلها مباشرة — المتسلل يسمعك!",
+    imposter_hint_text: "لا تعرف الكلمة الدقيقة. استخدم هذا التلميح للاندماج، وحاول تخمينها قبل انتهاء الوقت!",
+    imposter_no_hint_text: "أنت المتسلل! استمع جيدًا لإجابات الجميع لمعرفة الكلمة السرية.",
+    rules: [
+      { title:"الإعداد", body:"اختر فئة وأدخل أسماء اللاعبين. سيحصل كل لاعب سراً على دوره بمفرده." },
+      { title:"الأدوار", body:"<strong style='color:var(--civilian)'>المدنيون</strong> يرون الكلمة السرية. <strong style='color:var(--imposter)'>المتسلل</strong> يرى تلميحاً فقط — عليه الاندماج دون أن يُكشف أمره." },
+      { title:"النقاش", body:"يتناوب اللاعبون على طرح أسئلة غامضة. احذر — إن قلت الكثير سيخمن المتسلل الكلمة، وإن قلت القليل ستبدو مريباً!" },
+      { title:"شروط الفوز", body:"<strong style='color:var(--civilian)'>يفوز المدنيون</strong> إذا صوّتوا على المتسلل. <strong style='color:var(--imposter)'>يفوز المتسلل</strong> إذا نجا من التصويت أو خمّن الكلمة السرية خلال النقاش." },
+    ],
+    outcomes: {
+      civilians_won:     { banner:"🎉 انتصار",       title:"فاز المدنيون!",  how:"طُرد بالتصويت",   desc:(n,w)=>`تحدث الجمع وتحقق العدل. ${n} تم التعرف عليه بشكل صحيح كمتسلل!` },
+      imposter_survived: { banner:"🕵️ هزيمة",       title:"فاز المتسلل!",  how:"نجا من التصويت",  desc:(n,w)=>`${n} اندمج بشكل مثالي ونجا من التصويت! المدنيون اختاروا بشكل سيئ.` },
+      imposter_guessed:  { banner:"🎯 رائع!",        title:"فاز المتسلل!",  how:"خمّن الكلمة",     desc:(n,w)=>`${n} جمع القرائن وخمّن بشكل صحيح "${w}"! محقق بارع.` },
+      imposter_wrong:    { banner:"✓ تخمين خاطئ",   title:"فاز المدنيون!",  how:"تخمين سيئ",       desc:(n,w)=>`تخمين ${n} كان خاطئاً! يمكن للمدنيين الآن التعرف على المتسلل والفوز.` },
+    }
+  }
+};
+
+// ════════════════════════════════════════════════════════
+//  DEFAULT CATEGORIES DATA (bilingual)
+// ════════════════════════════════════════════════════════
+const DEFAULT_CATEGORIES = {
+  en: {
+    "🍕 Food":     { icon:"🍕", words:[{w:"Pizza",h:"Italian Fast Food"},{w:"Sushi",h:"Japanese Cuisine"},{w:"Taco",h:"Mexican Street Food"},{w:"Burger",h:"American Fast Food"},{w:"Ramen",h:"Asian Noodles"},{w:"Steak",h:"Grilled Meat"},{w:"Ice Cream",h:"Frozen Dessert"},{w:"Pancakes",h:"Breakfast Food"}] },
+    "🌍 Places":   { icon:"🌍", words:[{w:"Airport",h:"Travel Hub"},{w:"Library",h:"Public Building"},{w:"Hospital",h:"Medical Facility"},{w:"Casino",h:"Entertainment Venue"},{w:"Museum",h:"Cultural Site"},{w:"Stadium",h:"Sports Venue"},{w:"Beach",h:"Natural Location"},{w:"Subway",h:"Underground Transport"}] },
+    "🐘 Animals":  { icon:"🐘", words:[{w:"Elephant",h:"Large Land Animal"},{w:"Penguin",h:"Antarctic Bird"},{w:"Shark",h:"Ocean Predator"},{w:"Eagle",h:"Flying Bird"},{w:"Cheetah",h:"Fast Wild Cat"},{w:"Gorilla",h:"Large Primate"},{w:"Dolphin",h:"Sea Mammal"},{w:"Crocodile",h:"Reptile"}] },
+    "🎬 Movies":   { icon:"🎬", words:[{w:"Titanic",h:"Disaster Romance Film"},{w:"The Matrix",h:"Sci-Fi Action Film"},{w:"Inception",h:"Mind-Bending Thriller"},{w:"Jurassic Park",h:"Dinosaur Blockbuster"},{w:"Interstellar",h:"Space Drama"},{w:"The Godfather",h:"Crime Drama"},{w:"Avatar",h:"CGI Fantasy Film"},{w:"Toy Story",h:"Animated Film"}] },
+    "💻 Tech":     { icon:"💻", words:[{w:"iPhone",h:"Smartphone"},{w:"Bitcoin",h:"Digital Currency"},{w:"ChatGPT",h:"AI Chatbot"},{w:"YouTube",h:"Video Platform"},{w:"Bluetooth",h:"Wireless Tech"},{w:"GPS",h:"Navigation System"},{w:"WiFi",h:"Wireless Internet"},{w:"Algorithm",h:"Computer Logic"}] },
+    "⚽ Sports":   { icon:"⚽", words:[{w:"Tennis",h:"Racket Sport"},{w:"Swimming",h:"Water Sport"},{w:"Boxing",h:"Combat Sport"},{w:"Marathon",h:"Long Distance Running"},{w:"Basketball",h:"Ball Sport"},{w:"Skiing",h:"Winter Sport"},{w:"Golf",h:"Precision Sport"},{w:"Surfing",h:"Water Sport"}] },
+    "🎵 Music":    { icon:"🎵", words:[{w:"Guitar",h:"String Instrument"},{w:"Concert",h:"Live Music Event"},{w:"Vinyl Record",h:"Physical Music Media"},{w:"Microphone",h:"Audio Device"},{w:"DJ",h:"Music Performer"},{w:"Symphony",h:"Classical Performance"},{w:"Podcast",h:"Audio Content"},{w:"Karaoke",h:"Singing Activity"}] },
+    "🏠 Everyday": { icon:"🏠", words:[{w:"Elevator",h:"Building Transport"},{w:"Alarm Clock",h:"Time Device"},{w:"Umbrella",h:"Rain Protection"},{w:"Wallet",h:"Personal Item"},{w:"Mirror",h:"Reflective Surface"},{w:"Backpack",h:"Carrying Item"},{w:"Candle",h:"Light Source"},{w:"Scissors",h:"Cutting Tool"}] },
+  },
+  ar: {
+    "🍕 طعام":     { icon:"🍕", words:[{w:"بيتزا",h:"وجبة سريعة إيطالية"},{w:"سوشي",h:"مطبخ ياباني"},{w:"شاورما",h:"وجبة شرق أوسطية"},{w:"برجر",h:"وجبة سريعة أمريكية"},{w:"كباب",h:"لحم مشوي"},{w:"فلافل",h:"أكلة شعبية"},{w:"مندي",h:"طبق أرز باللحم"},{w:"كنافة",h:"حلوى شرقية"}] },
+    "🌍 أماكن":    { icon:"🌍", words:[{w:"مطار",h:"مركز سفر"},{w:"مكتبة",h:"مبنى عام"},{w:"مستشفى",h:"منشأة طبية"},{w:"متحف",h:"موقع ثقافي"},{w:"ملعب",h:"مكان رياضي"},{w:"شاطئ",h:"موقع طبيعي"},{w:"سوق",h:"مكان تسوق"},{w:"مسجد",h:"مكان عبادة"}] },
+    "🐘 حيوانات":  { icon:"🐘", words:[{w:"فيل",h:"حيوان بري ضخم"},{w:"أسد",h:"ملك الغابة"},{w:"دلفين",h:"حيوان بحري ذكي"},{w:"نسر",h:"طائر جارح"},{w:"تمساح",h:"زاحف خطير"},{w:"قرد",h:"رئيسيات"},{w:"حوت",h:"أكبر الثدييات"},{w:"نمر",h:"قطة برية سريعة"}] },
+    "🎬 أفلام":    { icon:"🎬", words:[{w:"تيتانيك",h:"فيلم رومانسي كارثي"},{w:"المصفوفة",h:"فيلم خيال علمي"},{w:"انسبشن",h:"إثارة محيرة"},{w:"أفاتار",h:"فيلم فانتازيا"},{w:"الأسد الملك",h:"فيلم رسوم متحركة"},{w:"إنتر ستيلار",h:"دراما فضائية"},{w:"توي ستوري",h:"فيلم رسوم متحركة"},{w:"عمر المختار",h:"فيلم تاريخي عربي"}] },
+    "💻 تقنية":    { icon:"💻", words:[{w:"آيفون",h:"هاتف ذكي"},{w:"بيتكوين",h:"عملة رقمية"},{w:"يوتيوب",h:"منصة فيديو"},{w:"بلوتوث",h:"تقنية لاسلكية"},{w:"GPS",h:"نظام ملاحة"},{w:"واي فاي",h:"إنترنت لاسلكي"},{w:"تشات جي بي تي",h:"روبوت محادثة"},{w:"تيك توك",h:"شبكة اجتماعية"}] },
+    "⚽ رياضة":    { icon:"⚽", words:[{w:"كرة القدم",h:"رياضة جماعية شعبية"},{w:"سباحة",h:"رياضة مائية"},{w:"ملاكمة",h:"رياضة قتالية"},{w:"كرة السلة",h:"رياضة بالكرة"},{w:"تنس",h:"رياضة المضرب"},{w:"جودو",h:"فنون قتالية"},{w:"ركض",h:"رياضة فردية"},{w:"غوص",h:"رياضة مائية"}] },
+    "🎵 موسيقى":   { icon:"🎵", words:[{w:"عود",h:"آلة وترية شرقية"},{w:"حفلة موسيقية",h:"فعالية موسيقية حية"},{w:"ميكروفون",h:"جهاز صوتي"},{w:"درامز",h:"آلة إيقاعية"},{w:"كاريوكي",h:"نشاط غنائي"},{w:"بيانو",h:"آلة موسيقية كلاسيكية"},{w:"ناي",h:"آلة نفخية"},{w:"موسيقى الراب",h:"نوع موسيقى حديث"}] },
+    "🏠 يومي":     { icon:"🏠", words:[{w:"مصعد",h:"وسيلة نقل داخلية"},{w:"منبه",h:"جهاز وقت"},{w:"مظلة",h:"حماية من المطر"},{w:"محفظة",h:"غرض شخصي"},{w:"مرآة",h:"سطح عاكس"},{w:"حقيبة ظهر",h:"حقيبة للحمل"},{w:"شمعة",h:"مصدر إضاءة"},{w:"مقص",h:"أداة قطع"}] },
+  }
+};
+
+// ════════════════════════════════════════════════════════
+//  LOCALSTORAGE HELPERS
+// ════════════════════════════════════════════════════════
+function loadCategories(lang) {
+  try {
+    const raw = localStorage.getItem(`imposter_cats_${lang}`);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_CATEGORIES[lang]));
+}
+
+function saveCategories(lang, cats) {
+  try { localStorage.setItem(`imposter_cats_${lang}`, JSON.stringify(cats)); } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════════
+//  APP STATE
+// ════════════════════════════════════════════════════════
+let lang = localStorage.getItem('imposter_lang') || 'en';
+let CATEGORIES = loadCategories(lang);
+
+let state = {
+  playerCount: 4,
+  playerNames: [],
+  category: null,
+  secretWord: null,
+  hint: null,
+  imposterIndex: -1,
+  roles: [],
+  passIndex: 0,
+  timerInterval: null,
+  timerSeconds: 180,
+  selectedVote: -1,
+  hintsEnabled: true,
+};
+
+let catManActive = null; // currently selected category key in manager
+let modalOkCallback = null;
+
+// ════════════════════════════════════════════════════════
+//  LANGUAGE & i18n
+// ════════════════════════════════════════════════════════
+function t(key) { return TRANSLATIONS[lang][key] || key; }
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    const val = TRANSLATIONS[lang][k];
+    if (val !== undefined) el.innerHTML = val;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const k = el.getAttribute('data-i18n-placeholder');
+    el.placeholder = t(k);
+  });
+  // Rules
+  const rg = document.getElementById('rules-grid');
+  if (rg) {
+    rg.innerHTML = TRANSLATIONS[lang].rules.map((r,i) => `
+      <div class="rule-card">
+        <div class="rule-num">${String(i+1).padStart(2,'0')}</div>
+        <div class="rule-text"><h3>${r.title}</h3><p>${r.body}</p></div>
+      </div>`).join('');
+  }
+}
+
+function toggleLang() {
+  lang = lang === 'en' ? 'ar' : 'en';
+  localStorage.setItem('imposter_lang', lang);
+  CATEGORIES = loadCategories(lang);
+  state.category = null;
+  applyLang();
+}
+
+function applyLang() {
+  const html = document.documentElement;
+  html.setAttribute('lang', lang);
+  html.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+  document.getElementById('lang-toggle-btn').textContent = lang === 'en' ? '🌐 ع' : '🌐 EN';
+  document.getElementById('logo-text').innerHTML = lang === 'ar'
+    ? 'مُتَسَلِّل'
+    : 'IMP<span class="logo-eye"></span>STER';
+  applyI18n();
+  renderNameFields();
+  renderCategories();
+}
+
+// ════════════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════════════
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ════════════════════════════════════════════════════════
+//  SETUP
+// ════════════════════════════════════════════════════════
+function initSetup() {
+  renderNameFields();
+  renderCategories();
+  document.getElementById('hint-toggle').checked = state.hintsEnabled;
+  document.getElementById('hint-toggle').onchange = (e) => { state.hintsEnabled = e.target.checked; };
+}
+
+function changeCount(delta) {
+  state.playerCount = Math.min(12, Math.max(3, state.playerCount + delta));
+  document.getElementById('count-display').textContent = state.playerCount;
+  renderNameFields();
+}
+
+function renderNameFields() {
+  const grid = document.getElementById('names-grid');
+  if (!grid) return;
+  const existing = [...grid.querySelectorAll('.name-input')].map(i => i.value);
+  grid.innerHTML = '';
+  for (let i = 0; i < state.playerCount; i++) {
+    const ph = lang === 'ar' ? `لاعب ${i+1}` : `Player ${i+1}`;
+    const row = document.createElement('div');
+    row.className = 'name-input-row';
+    row.innerHTML = `<div class="player-badge">${i+1}</div><input class="name-input" placeholder="${ph}" value="${existing[i]||''}">`;
+    grid.appendChild(row);
+  }
+}
+
+function renderCategories() {
+  const grid = document.getElementById('cat-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  Object.keys(CATEGORIES).forEach(key => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (state.category === key ? ' selected' : '');
+    const displayName = key.replace(/^[^\s]+\s/, '');
+    btn.innerHTML = `<span class="cat-icon">${CATEGORIES[key].icon}</span>${displayName}`;
+    btn.onclick = () => { state.category = key; renderCategories(); };
+    grid.appendChild(btn);
+  });
+}
+
+function startGame() {
+  const inputs = document.querySelectorAll('.name-input');
+  state.playerNames = [...inputs].map((inp,i) => inp.value.trim() || (lang==='ar'?`لاعب ${i+1}`:`Player ${i+1}`));
+
+  if (state.playerCount < 3) { showToast(t('min_players')); return; }
+  if (!state.category) { showToast(t('pick_category')); return; }
+
+  const cat = CATEGORIES[state.category];
+  if (!cat.words || cat.words.length === 0) { showToast(lang==='ar'?'لا توجد كلمات في هذه الفئة!':'No words in this category!'); return; }
+
+  const pair = cat.words[Math.floor(Math.random() * cat.words.length)];
+  state.secretWord = pair.w;
+  state.hint = pair.h;
+  state.imposterIndex = Math.floor(Math.random() * state.playerCount);
+  state.roles = state.playerNames.map((_,i) => i === state.imposterIndex ? 'imposter' : 'civilian');
+  state.passIndex = 0;
+  state.hintsEnabled = document.getElementById('hint-toggle').checked;
+
+  buildProgressDots();
+  showPassScreen();
+  goTo('screen-pass');
+}
+
+// ════════════════════════════════════════════════════════
+//  PASS THE PHONE
+// ════════════════════════════════════════════════════════
+function buildProgressDots() {
+  const c = document.getElementById('progress-dots');
+  c.innerHTML = '';
+  state.playerNames.forEach((_,i) => {
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot' + (i===0?' current':'');
+    dot.id = `dot-${i}`;
+    c.appendChild(dot);
+  });
+}
+
+function showPassScreen() {
+  const i = state.passIndex;
+  document.getElementById('pass-player-name').textContent = state.playerNames[i];
+  document.getElementById('pass-state-cover').style.display = 'block';
+  document.getElementById('pass-state-reveal').classList.remove('visible');
+  document.getElementById('pass-state-cover').querySelector('[data-i18n]').innerHTML = t('pass_to');
+  state.playerNames.forEach((_,j) => {
+    const d = document.getElementById(`dot-${j}`);
+    if (d) d.className = 'progress-dot'+(j<i?' done':j===i?' current':'');
+  });
+}
+
+function revealRole() {
+  const i = state.passIndex;
+  const isImposter = state.roles[i] === 'imposter';
+  const badge = document.getElementById('role-badge-el');
+  const wordEl = document.getElementById('secret-word-display');
+  const labelEl = document.getElementById('secret-label');
+  const hintEl = document.getElementById('role-hint-text');
+
+  if (isImposter) {
+    badge.textContent = t('role_imposter');
+    badge.className = 'role-badge imposter';
+    labelEl.textContent = t('your_hint');
+    if (state.hintsEnabled) {
+      wordEl.textContent = state.hint.toUpperCase();
+      hintEl.textContent = t('imposter_hint_text');
+    } else {
+      const catDisplayName = state.category.replace(/^[^\s]+\s/, '');
+      wordEl.textContent = (lang==='ar'?'فئة: ':'CAT: ') + catDisplayName.toUpperCase();
+      hintEl.textContent = t('imposter_no_hint_text');
+    }
+    wordEl.className = 'secret-word imposter-word';
+  } else {
+    badge.textContent = t('role_civilian');
+    badge.className = 'role-badge civilian';
+    labelEl.textContent = t('secret_word_label');
+    wordEl.textContent = state.secretWord.toUpperCase();
+    wordEl.className = 'secret-word';
+    hintEl.textContent = t('civilian_hint_text');
+  }
+
+  document.getElementById('pass-state-cover').style.display = 'none';
+  document.getElementById('pass-state-reveal').classList.add('visible');
+}
+
+function nextPlayer() {
+  state.passIndex++;
+  if (state.passIndex >= state.playerCount) {
+    startTimer();
+    goTo('screen-timer');
+  } else {
+    showPassScreen();
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  TIMER
+// ════════════════════════════════════════════════════════
+function startTimer() {
+  state.timerSeconds = 180;
+  const catName = state.category.replace(/^[^\s]+\s/,'');
+  document.getElementById('category-badge').textContent = catName;
+  document.getElementById('players-row').innerHTML = state.playerNames.map(n=>`<div class="player-chip">${n}</div>`).join('');
+  updateTimerDisplay();
+  clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    state.timerSeconds--;
+    updateTimerDisplay();
+    if (state.timerSeconds <= 0) { clearInterval(state.timerInterval); endDiscussion(); }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(state.timerSeconds/60);
+  const s = state.timerSeconds%60;
+  const el = document.getElementById('timer-display');
+  el.textContent = `${m}:${String(s).padStart(2,'0')}`;
+  el.className = 'timer-display'+(state.timerSeconds<=30?' urgent':'');
+}
+
+function endDiscussion() {
+  clearInterval(state.timerInterval);
+  buildVoteList();
+  goTo('screen-vote');
+}
+
+// ════════════════════════════════════════════════════════
+//  IMPOSTER GUESS
+// ════════════════════════════════════════════════════════
+function submitGuess() {
+  const guess = document.getElementById('guess-input').value.trim().toLowerCase();
+  const correct = state.secretWord.toLowerCase();
+  clearInterval(state.timerInterval);
+  showResults(guess === correct ? 'imposter_guessed' : 'imposter_wrong');
+  document.getElementById('guess-input').value = '';
+}
+
+// ════════════════════════════════════════════════════════
+//  VOTING
+// ════════════════════════════════════════════════════════
+function buildVoteList() {
+  state.selectedVote = -1;
+  document.getElementById('vote-list').innerHTML = state.playerNames.map((name,i)=>`
+    <div class="vote-card" id="vote-${i}" onclick="selectVote(${i})">
+      <span class="vote-name">${name}</span>
+      <div class="vote-indicator" id="vote-ind-${i}"></div>
+    </div>`).join('');
+  const btn = document.getElementById('vote-confirm-btn');
+  btn.style.opacity='0.4'; btn.style.pointerEvents='none';
+  btn.textContent = t('confirm_vote');
+}
+
+function selectVote(i) {
+  if (state.selectedVote===i) return;
+  if (state.selectedVote>=0) {
+    document.getElementById(`vote-${state.selectedVote}`).classList.remove('selected');
+    document.getElementById(`vote-ind-${state.selectedVote}`).textContent='';
+  }
+  state.selectedVote=i;
+  document.getElementById(`vote-${i}`).classList.add('selected');
+  document.getElementById(`vote-ind-${i}`).textContent='✓';
+  const btn=document.getElementById('vote-confirm-btn');
+  btn.style.opacity='1'; btn.style.pointerEvents='auto';
+}
+
+function confirmVote() {
+  if (state.selectedVote<0) return;
+  showResults(state.selectedVote===state.imposterIndex?'civilians_won':'imposter_survived');
+}
+
+// ════════════════════════════════════════════════════════
+//  RESULTS
+// ════════════════════════════════════════════════════════
+function showResults(outcome) {
+  const card = document.getElementById('results-card');
+  const o = TRANSLATIONS[lang].outcomes[outcome];
+  document.getElementById('result-imposter').textContent = state.playerNames[state.imposterIndex];
+  document.getElementById('result-word').textContent = state.secretWord;
+  document.getElementById('winner-banner').textContent = o.banner;
+  document.getElementById('winner-title').textContent = o.title;
+  document.getElementById('result-how').textContent = o.how;
+  document.getElementById('outcome-desc').textContent = o.desc(state.playerNames[state.imposterIndex], state.secretWord);
+  card.className = 'results-card ' + (outcome==='civilians_won'||outcome==='imposter_wrong'?'civilians-win':'imposter-wins');
+  spawnConfetti(outcome==='imposter_survived'||outcome==='imposter_guessed');
+  goTo('screen-results');
+}
+
+function spawnConfetti(red) {
+  const bg = document.getElementById('confetti-bg');
+  bg.innerHTML='';
+  const colors=red?['#ff3c5a','#ff6b80','#ffce00','#ff9a00']:['#00e5ff','#00b4cc','#ffce00','#ffffff'];
+  for(let i=0;i<40;i++){
+    const el=document.createElement('div');
+    el.className='confetti-piece';
+    el.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*-20}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${2+Math.random()*3}s;animation-delay:${Math.random()*2}s;width:${4+Math.random()*8}px;height:${4+Math.random()*8}px;`;
+    bg.appendChild(el);
+  }
+}
+
+function playAgain() {
+  clearInterval(state.timerInterval);
+  state.passIndex=0;
+  initSetup();
+  goTo('screen-setup');
+}
+
+// ════════════════════════════════════════════════════════
+//  CATEGORY MANAGER
+// ════════════════════════════════════════════════════════
+function openCatMan() {
+  catManActive = null;
+  renderCatManSidebar();
+  renderCatManMain(null);
+  goTo('screen-catman');
+}
+
+function closeCatMan() {
+  CATEGORIES = loadCategories(lang);
+  renderCategories();
+  if (state.category && !CATEGORIES[state.category]) state.category = null;
+  goTo('screen-setup');
+}
+
+function renderCatManSidebar() {
+  const sidebar = document.getElementById('catman-sidebar');
+  const cats = loadCategories(lang);
+  sidebar.innerHTML = Object.keys(cats).map(k => {
+    const name = k.replace(/^[^\s]+\s/,'');
+    return `<div class="sidebar-item${catManActive===k?' active':''}" onclick="selectCatMan('${CSS.escape(k)}')">
+      <span class="sidebar-icon">${cats[k].icon}</span>
+      <span class="sidebar-name">${name}</span>
+    </div>`;
+  }).join('') +
+  `<div class="sidebar-add-btn" onclick="showNewCatForm()">
+    <span>＋</span><span data-i18n="new_category">${t('new_category')}</span>
+  </div>`;
+}
+
+function selectCatMan(key) {
+  // CSS.escape was used for display; we need real key
+  const cats = loadCategories(lang);
+  // find matching key
+  const realKey = Object.keys(cats).find(k => CSS.escape(k) === key) || key;
+  catManActive = realKey;
+  renderCatManSidebar();
+  renderCatManMain(realKey);
+}
+
+function renderCatManMain(key) {
+  const main = document.getElementById('catman-main');
+  if (!key) {
+    main.innerHTML = `<div class="empty-state">${t('select_cat_hint')}</div>`;
+    return;
+  }
+  const cats = loadCategories(lang);
+  const cat = cats[key];
+  if (!cat) { main.innerHTML = `<div class="empty-state">${t('select_cat_hint')}</div>`; return; }
+  const displayName = key.replace(/^[^\s]+\s/,'');
+  const isDefault = !!DEFAULT_CATEGORIES[lang][key];
+
+  const wordRows = (cat.words||[]).map((wp,i) => `
+    <div class="word-row">
+      <div class="word-col">
+        <div class="w">${wp.w}</div>
+        <div class="h">${wp.h}</div>
+      </div>
+      <button class="delete-word-btn" onclick="deleteWord(${i})" title="Delete">🗑</button>
+    </div>`).join('');
+
+  main.innerHTML = `
+    <div class="cat-header-row">
+      <div>
+        <div class="cat-display-name">${cat.icon} ${displayName}</div>
+        <div class="cat-word-count">${(cat.words||[]).length} ${lang==='ar'?'كلمة':'words'}</div>
+      </div>
+      ${!isDefault ? `<button class="btn btn-danger btn-sm" onclick="confirmDeleteCat('${CSS.escape(key)}')">🗑 ${t('delete_category')}</button>` : ''}
+    </div>
+
+    <div class="catman-section-title">${t('words_in_cat')}</div>
+    <div class="word-list" id="word-list">
+      ${wordRows || `<div class="empty-state">${t('no_words')}</div>`}
+    </div>
+
+    <div class="catman-section-title">${t('add_word')}</div>
+    <div class="add-word-form">
+      <div class="form-row">
+        <input id="new-word-input" placeholder="${t('new_word')}">
+        <input id="new-hint-input" placeholder="${t('new_hint')}">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addWord()" style="width:100%;margin:0">＋ ${t('add_to_cat')}</button>
+    </div>
+  `;
+}
+
+function addWord() {
+  const wEl = document.getElementById('new-word-input');
+  const hEl = document.getElementById('new-hint-input');
+  const w = wEl.value.trim();
+  const h = hEl.value.trim();
+  if (!w || !h) { showToast(t('fill_fields')); return; }
+  const cats = loadCategories(lang);
+  if (!cats[catManActive].words) cats[catManActive].words = [];
+  cats[catManActive].words.push({w,h});
+  saveCategories(lang, cats);
+  CATEGORIES = cats;
+  wEl.value=''; hEl.value='';
+  renderCatManMain(catManActive);
+  showToast(t('word_added'));
+}
+
+function deleteWord(index) {
+  const cats = loadCategories(lang);
+  cats[catManActive].words.splice(index, 1);
+  saveCategories(lang, cats);
+  CATEGORIES = cats;
+  renderCatManMain(catManActive);
+  showToast(t('word_deleted'));
+}
+
+function confirmDeleteCat(keyEscaped) {
+  const cats = loadCategories(lang);
+  const realKey = Object.keys(cats).find(k => CSS.escape(k) === keyEscaped) || keyEscaped;
+  const name = realKey.replace(/^[^\s]+\s/,'');
+  showModal(
+    `${t('delete_category')}`,
+    lang==='ar' ? `هل أنت متأكد من حذف فئة "${name}"؟` : `Delete the category "${name}"? This cannot be undone.`,
+    () => {
+      const c2 = loadCategories(lang);
+      delete c2[realKey];
+      saveCategories(lang, c2);
+      CATEGORIES = c2;
+      catManActive = null;
+      renderCatManSidebar();
+      renderCatManMain(null);
+      showToast(t('cat_deleted'));
+    }
+  );
+}
+
+function showNewCatForm() {
+  catManActive = null;
+  renderCatManSidebar();
+  const main = document.getElementById('catman-main');
+  main.innerHTML = `
+    <div class="screen-title" style="font-size:28px;margin-bottom:20px">${t('new_category')}</div>
+    <div class="new-cat-form">
+      <input id="nc-emoji" placeholder="${t('cat_emoji')} (e.g. 🏆)" maxlength="4">
+      <input id="nc-name" placeholder="${t('cat_name')}">
+      <button class="btn btn-primary" onclick="createCategory()" style="margin:0">＋ ${t('create_cat')}</button>
+    </div>
+  `;
+}
+
+function createCategory() {
+  const emoji = document.getElementById('nc-emoji').value.trim() || '📦';
+  const name = document.getElementById('nc-name').value.trim();
+  if (!name) { showToast(t('fill_fields')); return; }
+  const key = `${emoji} ${name}`;
+  const cats = loadCategories(lang);
+  if (cats[key]) { showToast(lang==='ar'?'الفئة موجودة بالفعل!':'Category already exists!'); return; }
+  cats[key] = { icon: emoji, words: [] };
+  saveCategories(lang, cats);
+  CATEGORIES = cats;
+  catManActive = key;
+  renderCatManSidebar();
+  renderCatManMain(key);
+  showToast(t('cat_created'));
+}
+
+// ════════════════════════════════════════════════════════
+//  MODAL
+// ════════════════════════════════════════════════════════
+function showModal(title, body, onOk) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').textContent = body;
+  document.getElementById('modal-ok-btn').textContent = t('delete');
+  document.getElementById('modal-ok-btn').onclick = () => { closeModal(); onOk(); };
+  document.getElementById('modal-confirm').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-confirm').classList.remove('open');
+}
+
+// ════════════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t2 = document.getElementById('toast');
+  t2.textContent = msg;
+  t2.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t2.classList.remove('show'), 2500);
+}
+
+// ════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════
+applyLang();
+initSetup();
+</script>
+</body>
+</html>
